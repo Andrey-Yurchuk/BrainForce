@@ -57,10 +57,53 @@ $pattern = '/<locality-name>Москва<\/locality-name>.*?<type>аренда<\
 
 if (preg_match_all($pattern, $xmlContent, $matches)) {
     foreach ($matches[1] as $description) {
-        if (stripos($description, 'животные') !== false || stripos($description, 'с животными') !== false) {
-            $moscowCount++;
+        if (!containsAnimals($description)) {
+            continue;
         }
+        if (containsProhibitedWords($description)) {
+            continue;
+        }
+        if (hasMultipleAnimalReferences($description)) {
+            continue;
+        }
+        $moscowCount++;
     }
 }
 
 echo "<p>Найдено квартир в Москве с возможностью размещения с животными: $moscowCount\n</p>";
+
+/**
+ * Проверяет, содержатся ли слова "животные", "животных" или "с животными" в описании
+ *
+ * @param string $description Описание квартиры
+ * @return bool Возвращает true, если одно из слов найдено, иначе false
+ */
+function containsAnimals(string $description): bool
+{
+    return stripos($description, 'животные') !== false
+        || stripos($description, 'животных') !== false
+        || stripos($description, 'с животными') !== false;
+}
+
+/**
+ * Проверяет наличие запрещающих слов в описании, находящихся в одном предложении с "животные", "животных" или "с животными"
+ *
+ * @param string $description Описание квартиры
+ * @return bool Возвращает true, если найдено запрещающее слово в одном предложении с одним из указанных слов, иначе false
+ */
+function containsProhibitedWords(string $description): bool
+{
+    return preg_match('/(животные|животных|с животными).*?(нельзя|без|не заселяем|не допускается|не разрешается|не разрешено\s*|не сдаётся|невозможно|не предусмотрено|запрещено|не принимаем)|'
+            . '(нельзя|без|не заселяем|не допускается|не разрешается|не разрешено\s*|не сдаётся|невозможно|не предусмотрено|запрещено|не принимаем).*?(животные|животных|с животными)/i', $description) > 0;
+}
+
+/**
+ * Проверяет, содержатся ли слова "животные", "животных" или "с животными" более одного раза в описании
+ *
+ * @param string $description Описание квартиры
+ * @return bool Возвращает true, если упоминания больше одного, иначе false
+ */
+function hasMultipleAnimalReferences(string $description): bool
+{
+    return preg_match_all('/животные|животных|с животными/i', $description) > 1;
+}
